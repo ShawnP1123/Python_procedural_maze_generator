@@ -13,6 +13,38 @@ class cell:
         self.right = True
         self.visited = False
 
+# player class
+class Player:
+    def __init__(self, col, row):
+        self.col = col
+        self.row = row
+
+    def move_up(self):
+        if not grid[self.col][self.row].top:
+            self.row -= 1
+
+    def move_down(self):
+        if not grid[self.col][self.row].bottom:
+            self.row += 1
+
+    def move_left(self):
+        if not grid[self.col][self.row].left:
+            self.col -= 1
+
+    def move_right(self):
+        if not grid[self.col][self.row].right:
+            self.col += 1
+
+    def draw(self):
+        x = self.col * (CELL_SIZE) + MARGIN
+        y = self.row * (CELL_SIZE) + MARGIN
+        pygame.draw.rect(screen, (0, 255, 0), (x + (CELL_SIZE//3), y + (CELL_SIZE//3), CELL_SIZE // 2, CELL_SIZE // 2))
+
+    def undraw(self):
+        x = self.col * (CELL_SIZE) + MARGIN
+        y = self.row * (CELL_SIZE) + MARGIN
+        pygame.draw.rect(screen, BLACK, (x + (CELL_SIZE//3), y + (CELL_SIZE//3), CELL_SIZE // 2, CELL_SIZE // 2))
+
 # initializations
 pygame.init()
 SCREEN_WIDTH = 1400
@@ -63,13 +95,13 @@ def draw_cell(col, row):
     y = row * (CELL_SIZE) + MARGIN 
     cell = grid[col][row]
     if not cell.top:
-        pygame.draw.line(screen, BLACK, (x, y), (x + CELL_SIZE , y), 2)
+        pygame.draw.line(screen, BLACK, (x+1, y), (x + CELL_SIZE-1 , y), 2)
     if not cell.right:
-        pygame.draw.line(screen, BLACK, (x + CELL_SIZE, y), (x + CELL_SIZE, y + CELL_SIZE ), 2)
+        pygame.draw.line(screen, BLACK, (x + CELL_SIZE, y+1), (x + CELL_SIZE, y + CELL_SIZE-1 ), 2)
     if not cell.bottom:
-        pygame.draw.line(screen, BLACK, (x, y + CELL_SIZE), (x + CELL_SIZE, y + CELL_SIZE), 2)
+        pygame.draw.line(screen, BLACK, (x+1, y + CELL_SIZE), (x + CELL_SIZE-1, y + CELL_SIZE), 2)
     if not cell.left:
-        pygame.draw.line(screen, BLACK, (x, y), (x, y + CELL_SIZE), 2)
+        pygame.draw.line(screen, BLACK, (x, y+1), (x, y + CELL_SIZE-1), 2)
 
 # the whole shabam
 def generate():
@@ -84,6 +116,7 @@ def generate():
     grid[0][0].top = False
     total_cells = GRID_COLS * GRID_ROWS
     visited_cells = 1
+    draw_count = 0
 
     # draw a filled up grid for the program to carve out
     draw_grid()
@@ -93,8 +126,12 @@ def generate():
 
         # draw only the cells one at a time to increase performance by like 1 million percent
         draw_cell(curr_x_index, curr_y_index)
-        pygame.display.flip()
 
+        # speed it up even more for larger mazes
+        if draw_count > 300 * 1/CELL_SIZE:
+            pygame.display.flip()
+            draw_count = 0
+        draw_count += 1
         directions = ["up", "down", "left", "right"]
         
         # filter directions 
@@ -109,8 +146,7 @@ def generate():
 
         # backtrack
         if not directions:
-            backpos = random.choice(cell_mem)
-            cell_mem.remove(backpos)
+            backpos = cell_mem.pop()
             curr_x_index = backpos[0]
             curr_y_index = backpos[1]
         
@@ -144,13 +180,17 @@ def generate():
                 visited_cells += 1
 
     # if you dont do this there will be a few cells left untouched for some reason
-    force_final_check()
+    # nvm i think i fixed it but i'll leave it here in case
+    # force_final_check()
+
     # make the grid look nice
     draw_grid()
     pygame.display.flip()
+
     # how long did it take?
     elapsed_time = (pygame.time.get_ticks() - start_time)/1000
     print(f"done in {elapsed_time} seconds")
+
 
 # just makes sure every cell is connected to another, isn't too slow
 def force_final_check():
@@ -189,13 +229,42 @@ def force_final_check():
 
 # generate the bitch
 generate()
+player = Player(0,0)
+counter = 0
 
-# just to keep it open
+# just to keep it open and control a player
 running = True
 while running:
+    player.draw()
+    pygame.display.flip()
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             running = False
+
+    # Key state checking
+    keys = pygame.key.get_pressed()
+    if keys[pygame.K_w] and counter == 0:
+        player.undraw()
+        player.move_up()
+        counter += 1
+    if keys[pygame.K_a] and counter == 0:
+        player.undraw()
+        player.move_left()
+        counter += 1
+    if keys[pygame.K_s] and counter == 0:
+        player.undraw()
+        player.move_down()
+        counter += 1
+    if keys[pygame.K_d] and counter == 0:
+        player.undraw()
+        player.move_right()
+        counter += 1
+
+    if counter > 0:
+        counter += 1
+    
+    if counter > 55:
+        counter = 0
 
 
 pygame.quit()
